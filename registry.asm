@@ -202,7 +202,9 @@ SaveHighScore proc pGame:DWORD
 @@:
     ; Copy player name to high score name
     push esi
+    push edi
     lea esi, [esi].GAME_STATE.playerName
+    mov edi, pGame
     lea edi, [edi].GAME_STATE.highScoreName
     xor ecx, ecx
 @@:
@@ -215,6 +217,7 @@ SaveHighScore proc pGame:DWORD
     jl @B
 @@:
     mov word ptr [edi + ecx*2], 0
+    pop edi
     pop esi
 @name_ready:
     

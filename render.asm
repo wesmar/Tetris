@@ -34,16 +34,15 @@ szEmail db "marek@wesolowski.eu.org", 0
 szWebsite db "https://kvc.pl", 0
 szPaused db "PAUSED", 0
 szGameOver db "GAME OVER!", 0
-
 ; Color palette (BGR format): empty, I, O, Z, S, T, L, J
 colorTable dd 00000000h                 ; 0: Empty (black)
            dd 00FFFF00h                 ; 1: Cyan (I-piece)
-           dd 00FFFF00h                 ; 2: Yellow (O-piece)
-           dd 00800080h                 ; 3: Purple (Z-piece)
+           dd 0000FFFFh                 ; 2: Yellow (O-piece)
+           dd 00FF00FFh                 ; 3: Magenta (Z-piece)
            dd 0000FF00h                 ; 4: Green (S-piece)
-           dd 000000FFh                 ; 5: Red (T-piece)
-           dd 00FF0000h                 ; 6: Blue (L-piece)
-           dd 0000A5FFh                 ; 7: Orange (J-piece)
+           dd 00FF8000h                 ; 5: Purple (T-piece)
+           dd 00FF8000h                 ; 6: Orange (L-piece)
+           dd 000080FFh                 ; 7: Red (J-piece)
 
 .code
 
@@ -171,10 +170,10 @@ CreateBackBuffer proc pRenderer:DWORD
     mov hdc, eax
     invoke CreateCompatibleDC, eax
     mov [esi].RENDERER_STATE.hdcMem, eax
-    invoke CreateCompatibleBitmap, hdc, [esi].RENDERER_STATE.wWidth, [esi].RENDERER_STATE.wHeight
-    mov [esi].RENDERER_STATE.hbmMem, eax
-    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, eax
-    mov [esi].RENDERER_STATE.hbmOld, eax
+	invoke CreateCompatibleBitmap, hdc, [esi].RENDERER_STATE.wWidth, [esi].RENDERER_STATE.wHeight
+	mov [esi].RENDERER_STATE.hbmMem, eax
+	invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hbmMem
+	mov [esi].RENDERER_STATE.hbmOld, eax
     invoke ReleaseDC, [esi].RENDERER_STATE.hwnd, hdc
     
     pop esi

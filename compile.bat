@@ -33,7 +33,7 @@ del *.obj
 
 echo.
 echo ========================================
-echo SUCCESS! main.exe created.
+echo SUCCESS! tetris.exe created.
 echo ========================================
 echo.
 goto end

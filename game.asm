@@ -526,7 +526,7 @@ UpdateGame proc pGame:DWORD, deltaTimeMs:DWORD
     cmp [esi].GAME_STATE.paused, 0
     jne @@exit_update
     
-    ; Calculate fall speed: 300ms + (level-1)*50ms per row
+    ; Gravity accumulator: higher level => larger yFloat increment => faster falling
     mov eax, [esi].GAME_STATE.level
     dec eax
     imul eax, 50
@@ -638,8 +638,9 @@ MoveDown proc pGame:DWORD, dy:DWORD
     ret
 MoveDown endp
 
-; Rotate piece 90° clockwise with collision check
+; Rotate piece 90° clockwise with wall kick and collision check
 RotatePiece proc pGame:DWORD
+    local backupBlocks[8]:DWORD
     push esi
     push edi
     push ebx
@@ -661,6 +662,16 @@ RotatePiece proc pGame:DWORD
         pop esi
         ret
     .ENDIF
+    
+    ; Backup original block positions before rotation
+    push esi
+    push edi
+    lea esi, [edi + PIECE.blocks]
+    lea edi, backupBlocks
+    mov ecx, 8
+    rep movsd
+    pop edi
+    pop esi
     
     ; Rotation pivot point (1,1 for most pieces)
     mov ecx, 1
@@ -695,30 +706,35 @@ RotatePiece proc pGame:DWORD
 .ENDW
     pop esi
     
-    ; Revert rotation if collision
+	; Check collision and try wall kicks
     invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
     .IF eax
-        ; Reverse rotation matrix
-        push esi
-        xor esi, esi
-.WHILE esi < 4
-        mov eax, [edi + PIECE.blocks + esi*8]
-        sub eax, ecx
-        mov ebx, [edi + PIECE.blocks + esi*8 + 4]
-        sub ebx, edx
-        
-        push ebx
-        mov ebx, eax
-        add ebx, ecx
-        mov [edi + PIECE.blocks + esi*8], ebx
-        pop ebx
-        neg ebx
-        add ebx, edx
-        mov [edi + PIECE.blocks + esi*8 + 4], ebx
-        
-        inc esi
-.ENDW
-        pop esi
+        ; Try kick right (+1)
+        inc [esi].GAME_STATE.currentPiece.x
+        invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+        .IF eax
+            ; Try kick left (-2 from original)
+            sub [esi].GAME_STATE.currentPiece.x, 2
+            invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+            .IF eax
+                ; Try kick right more (+2 from original)
+                add [esi].GAME_STATE.currentPiece.x, 3
+                invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+                .IF eax
+                    ; All kicks failed - restore position and original blocks
+                    sub [esi].GAME_STATE.currentPiece.x, 2
+                    
+                    push esi
+                    push edi
+                    lea edi, [edi + PIECE.blocks]
+                    lea esi, backupBlocks
+                    mov ecx, 8
+                    rep movsd
+                    pop edi
+                    pop esi
+                .ENDIF
+            .ENDIF
+        .ENDIF
     .ENDIF
     
     pop ebx
