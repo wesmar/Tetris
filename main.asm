@@ -201,7 +201,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     
     ; Load saved player name from registry and display it
     invoke LoadPlayerName, addr g_game
-    invoke SetWindowText, g_hEditName, addr g_game.playerName
+    invoke SetWindowTextW, g_hEditName, addr g_game.playerName
     
     ; Show window on screen
     invoke ShowWindow, hwnd, nCmdShow
@@ -318,7 +318,7 @@ WindowProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
             shr eax, 16
             .IF eax == EN_CHANGE
                 ; Save new player name to game state and registry
-                invoke GetWindowText, g_hEditName, addr buffer, 256
+                invoke GetWindowTextW, g_hEditName, addr buffer, 256
                 invoke SetPlayerName, addr g_game, addr buffer
                 invoke SavePlayerName, addr buffer
             .ENDIF

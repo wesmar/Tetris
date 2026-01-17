@@ -26,6 +26,10 @@ bagIndex dd 7                        ; Current position in bag (7 = empty, reshu
 
 .code
 
+; Board size limits for safety
+BOARD_MAX_CELLS equ 400         ; Maximum total cells (prevents overflow)
+BOARD_MIN_DIM equ 4             ; Minimum width/height for playability
+
 ; Initialize game state with board dimensions
 ; Args: pGame - pointer to GAME_STATE, boardWidth/Height - dimensions
 InitGame proc pGame:DWORD, boardWidth:DWORD, boardHeight:DWORD
@@ -33,11 +37,32 @@ InitGame proc pGame:DWORD, boardWidth:DWORD, boardHeight:DWORD
     push edi
     mov esi, pGame
     
-    ; Store board dimensions
+    ; Validate board dimensions to prevent buffer overflow
+    ; Maximum safe size is 400 cells (20x20 board)
+    mov eax, boardWidth
+    imul eax, boardHeight
+    cmp eax, 400
+    jg @@invalid_size
+    
+    ; Check minimum dimensions (at least 4x4 for gameplay)
+    cmp boardWidth, 4
+    jl @@invalid_size
+    cmp boardHeight, 4
+    jl @@invalid_size
+    
+    ; Store validated board dimensions
     mov eax, boardWidth
     mov [esi].GAME_STATE.boardWidth, eax
     mov eax, boardHeight
     mov [esi].GAME_STATE.boardHeight, eax
+    jmp @@dimensions_ok
+    
+@@invalid_size:
+    ; Fall back to safe default 10x20
+    mov [esi].GAME_STATE.boardWidth, 10
+    mov [esi].GAME_STATE.boardHeight, 20
+    
+@@dimensions_ok:
     
     ; Reset game metrics
     mov [esi].GAME_STATE.score, 0
@@ -673,11 +698,18 @@ RotatePiece proc pGame:DWORD
     pop edi
     pop esi
     
-    ; Rotation pivot point (1,1 for most pieces)
-    mov ecx, 1
-    mov edx, 1
+	; Rotation pivot point varies by piece type
+    ; I-piece uses (1.5, 1.5) approximated as special rotation
+    ; All other pieces use standard (1,1) pivot
     
-    .IF byte ptr [edi].PIECE.shapeType == 0
+    movzx eax, byte ptr [edi].PIECE.shapeType
+    .IF eax == 0
+        ; I-piece: rotation around center between blocks
+        ; We'll use (1,1) pivot but with adjusted wall kick table
+        mov ecx, 1
+        mov edx, 1
+    .ELSE
+        ; Standard pieces: rotate around (1,1)
         mov ecx, 1
         mov edx, 1
     .ENDIF
@@ -707,31 +739,62 @@ RotatePiece proc pGame:DWORD
     pop esi
     
 	; Check collision and try wall kicks
+    ; I-piece needs more aggressive kicks due to its length
     invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
     .IF eax
-        ; Try kick right (+1)
-        inc [esi].GAME_STATE.currentPiece.x
-        invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
-        .IF eax
-            ; Try kick left (-2 from original)
-            sub [esi].GAME_STATE.currentPiece.x, 2
+        movzx ebx, byte ptr [edi].PIECE.shapeType
+        
+        .IF ebx == 0
+            ; I-piece wall kicks: try +1, -1, +2, -2
+            inc [esi].GAME_STATE.currentPiece.x
             invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
             .IF eax
-                ; Try kick right more (+2 from original)
-                add [esi].GAME_STATE.currentPiece.x, 3
+                sub [esi].GAME_STATE.currentPiece.x, 2
                 invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
                 .IF eax
-                    ; All kicks failed - restore position and original blocks
-                    sub [esi].GAME_STATE.currentPiece.x, 2
-                    
-                    push esi
-                    push edi
-                    lea edi, [edi + PIECE.blocks]
-                    lea esi, backupBlocks
-                    mov ecx, 8
-                    rep movsd
-                    pop edi
-                    pop esi
+                    add [esi].GAME_STATE.currentPiece.x, 3
+                    invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+                    .IF eax
+                        sub [esi].GAME_STATE.currentPiece.x, 4
+                        invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+                        .IF eax
+                            ; Restore to original position
+                            add [esi].GAME_STATE.currentPiece.x, 2
+                            
+                            push esi
+                            push edi
+                            lea edi, [edi + PIECE.blocks]
+                            lea esi, backupBlocks
+                            mov ecx, 8
+                            rep movsd
+                            pop edi
+                            pop esi
+                        .ENDIF
+                    .ENDIF
+                .ENDIF
+            .ENDIF
+        .ELSE
+            ; Standard pieces: +1, -2, +3 kicks
+            inc [esi].GAME_STATE.currentPiece.x
+            invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+            .IF eax
+                sub [esi].GAME_STATE.currentPiece.x, 2
+                invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+                .IF eax
+                    add [esi].GAME_STATE.currentPiece.x, 3
+                    invoke CheckCollision, pGame, addr [esi].GAME_STATE.currentPiece
+                    .IF eax
+                        sub [esi].GAME_STATE.currentPiece.x, 2
+                        
+                        push esi
+                        push edi
+                        lea edi, [edi + PIECE.blocks]
+                        lea esi, backupBlocks
+                        mov ecx, 8
+                        rep movsd
+                        pop edi
+                        pop esi
+                    .ENDIF
                 .ENDIF
             .ENDIF
         .ENDIF

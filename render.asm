@@ -34,15 +34,16 @@ szEmail db "marek@wesolowski.eu.org", 0
 szWebsite db "https://kvc.pl", 0
 szPaused db "PAUSED", 0
 szGameOver db "GAME OVER!", 0
-; Color palette (BGR format): empty, I, O, Z, S, T, L, J
-colorTable dd 00000000h                 ; 0: Empty (black)
-           dd 00FFFF00h                 ; 1: Cyan (I-piece)
-           dd 0000FFFFh                 ; 2: Yellow (O-piece)
-           dd 00FF00FFh                 ; 3: Magenta (Z-piece)
-           dd 0000FF00h                 ; 4: Green (S-piece)
-           dd 00FF8000h                 ; 5: Purple (T-piece)
-           dd 00FF8000h                 ; 6: Orange (L-piece)
-           dd 000080FFh                 ; 7: Red (J-piece)
+; Color palette (BGR format for Windows GDI)
+; Standard Tetris colors matching classic guideline
+colorTable dd 00000000h                 ; 0: Empty cell (black)
+           dd 00FFFF00h                 ; 1: Cyan (I-piece - straight line)
+           dd 0000FFFFh                 ; 2: Yellow (O-piece - square)
+           dd 000000FFh                 ; 3: Red (Z-piece - left zigzag)
+           dd 0000FF00h                 ; 4: Green (S-piece - right zigzag)
+           dd 00800080h                 ; 5: Purple (T-piece - T-shape)
+           dd 000080FFh                 ; 6: Orange (L-piece - left L)
+           dd 00FF8000h                 ; 7: Blue (J-piece - right L)
 
 .code
 
@@ -551,6 +552,7 @@ DrawNextPiece endp
 ; Draw score, lines, level, high score, and game state messages
 DrawInfo proc pRenderer:DWORD, pGame:DWORD
     local buffer[64]:WORD
+	local ansiBuffer[128]:BYTE
     local hOldFont:HFONT
     local rect:RECT
     local hpenSep:HPEN
@@ -585,24 +587,24 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 60, addr buffer, eax
     
     ; Draw high score in gold color
-    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0000D7FFh
+	invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0000D7FFh
     invoke wsprintf, addr buffer, offset szRecord, [edi].GAME_STATE.highScore
     invoke lstrlen, addr buffer
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 100, addr buffer, eax
     
-    ; Draw high scorer name (Unicode)
+    ; Draw high scorer name below record score
+    ; Convert Unicode to ANSI for reliable display
     lea ebx, [edi].GAME_STATE.highScoreName
     cmp word ptr [ebx], 0
     je @skip_name
-    push ebx
-    call lstrlenW
-    push eax
-    push ebx
-    push INFO_Y + 125
-    push INFO_X
-    mov ecx, [esi].RENDERER_STATE.hdcMem
-    push ecx
-    call TextOutW
+    
+    invoke WideCharToMultiByte, CP_ACP, 0, ebx, -1, 
+           addr ansiBuffer, 128, NULL, NULL
+    
+    invoke lstrlen, addr ansiBuffer
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 125, 
+           addr ansiBuffer, eax
+    
 @skip_name:
     
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh

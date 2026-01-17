@@ -16,7 +16,7 @@ PIECE ENDS
 GAME_STATE STRUCT
     boardWidth DWORD ?
     boardHeight DWORD ?
-    board BYTE 200 DUP(?)
+    board BYTE 400 DUP(?)
     currentPiece PIECE <>
     nextPiece PIECE <>
     score DWORD ?
