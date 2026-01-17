@@ -70,6 +70,7 @@ InitGame proc pGame:DWORD, boardWidth:DWORD, boardHeight:DWORD
     mov [esi].GAME_STATE.level, 1
     mov [esi].GAME_STATE.gameOver, 0
     mov [esi].GAME_STATE.paused, 0
+    mov [esi].GAME_STATE.showGhost, 0
 
     ; Clear board memory
     push esi

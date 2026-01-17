@@ -25,6 +25,7 @@ TIMER_ID equ 1
 IDC_EDIT_NAME equ 1001
 IDC_BUTTON_CLEAR equ 1002
 IDC_BUTTON_START equ 1003
+IDC_BUTTON_GHOST equ 1004
 
 ; Menu/Accelerator IDs
 IDM_PAUSE equ 2001
@@ -42,6 +43,8 @@ szPlayerLabel db "Player:", 0
 szPauseGame db "&Pause Game", 0
 szResumeGame db "&Resume Game", 0
 szClearRecord db "&Clear Record", 0
+szGhostOn db "Ghost: ON", 0
+szGhostOff db "Ghost: OFF", 0
 szRecordCleared db "Record cleared successfully!", 0
 szTetris db "Tetris", 0
 szArial db "Arial", 0
@@ -54,6 +57,7 @@ g_hInstance dd 0
 g_hEditName dd 0
 g_hButtonClear dd 0
 g_hButtonStart dd 0
+g_hButtonGhost dd 0
 g_lastTickCount dd 0
 
 .data?
@@ -174,30 +178,48 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     ; Create player name text input box
     invoke CreateWindowEx, WS_EX_CLIENTEDGE, addr szEditClass, NULL,
         WS_CHILD or WS_VISIBLE or ES_AUTOHSCROLL or WS_BORDER,
-        70, 530, 130, 24,
+        70, 530, 90, 24,
         hwnd, IDC_EDIT_NAME, hInst, NULL
     mov g_hEditName, eax
-    
+
     ; Create normal font for text input
     invoke CreateFont, 15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH or FF_DONTCARE, offset szArial
     mov hEditFont, eax
     invoke SendMessage, g_hEditName, WM_SETFONT, eax, TRUE
-    
+
+    ; Create smaller font for buttons
+    invoke CreateFont, 13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, DEFAULT_PITCH or FF_DONTCARE, offset szArial
+    push eax
+
     ; Create Pause/Resume button
     invoke CreateWindowEx, 0, addr szButtonClass, offset szPauseGame,
         WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON,
-        220, 527, 120, 30,
+        170, 527, 105, 30,
         hwnd, IDC_BUTTON_START, hInst, NULL
     mov g_hButtonStart, eax
-    
+    invoke SendMessage, g_hButtonStart, WM_SETFONT, dword ptr [esp], TRUE
+
     ; Create Clear Record button
     invoke CreateWindowEx, 0, addr szButtonClass, offset szClearRecord,
         WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON,
-        350, 527, 120, 30,
+        280, 527, 95, 30,
         hwnd, IDC_BUTTON_CLEAR, hInst, NULL
     mov g_hButtonClear, eax
+    invoke SendMessage, g_hButtonClear, WM_SETFONT, dword ptr [esp], TRUE
+
+    ; Create Ghost toggle button
+    invoke CreateWindowEx, 0, addr szButtonClass, offset szGhostOn,
+        WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON,
+        380, 527, 90, 30,
+        hwnd, IDC_BUTTON_GHOST, hInst, NULL
+    mov g_hButtonGhost, eax
+    invoke SendMessage, g_hButtonGhost, WM_SETFONT, dword ptr [esp], TRUE
+
+    pop eax
     
     ; Load saved player name from registry and display it
     invoke LoadPlayerName, addr g_game
@@ -424,6 +446,29 @@ WindowProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
                     invoke MessageBox, hWnd, offset szRecordCleared, offset szTetris, MB_OK or MB_ICONINFORMATION
                 .ENDIF
                 invoke SetFocus, hWnd
+            .ENDIF
+
+        .ELSEIF eax == IDC_BUTTON_GHOST
+            ; Ghost toggle button clicked
+            mov eax, wParam
+            shr eax, 16
+            .IF eax == BN_CLICKED
+                ; Toggle ghost piece visibility
+                xor g_game.showGhost, 1
+                .IF g_game.showGhost
+                    invoke SetWindowText, g_hButtonGhost, offset szGhostOn
+                .ELSE
+                    invoke SetWindowText, g_hButtonGhost, offset szGhostOff
+                .ENDIF
+
+                invoke SetFocus, hWnd
+
+                ; Redraw game area
+                mov rect.left, 0
+                mov rect.top, 0
+                mov rect.right, 480
+                mov rect.bottom, GAME_AREA_HEIGHT
+                invoke InvalidateRect, hWnd, addr rect, FALSE
             .ENDIF
         .ENDIF
         xor eax, eax

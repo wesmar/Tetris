@@ -24,7 +24,8 @@ GAME_STATE STRUCT
     level DWORD ?
     gameOver BYTE ?
     paused BYTE ?
-    padding WORD ?
+    showGhost BYTE ?
+    padding BYTE ?
     rngSeed DWORD ?
     playerName WORD 128 DUP(?)
     highScore DWORD ?

@@ -22,6 +22,7 @@ CreateBackBuffer PROTO :DWORD
 ResizeRenderer PROTO :DWORD, :DWORD, :DWORD
 RenderGame PROTO :DWORD, :DWORD, :DWORD
 DrawBoard PROTO :DWORD, :DWORD
+DrawGhostPiece PROTO :DWORD, :DWORD
 DrawPiece PROTO :DWORD, :DWORD
 DrawNextPiece PROTO :DWORD, :DWORD
 DrawInfo PROTO :DWORD, :DWORD

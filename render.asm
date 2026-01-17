@@ -242,6 +242,7 @@ RenderGame proc pRenderer:DWORD, pGame:DWORD, hdc:DWORD
     
     ; Draw all game elements
     invoke DrawBoard, pRenderer, pGame
+    invoke DrawGhostPiece, pRenderer, pGame
     invoke DrawPiece, pRenderer, addr [edi].GAME_STATE.currentPiece
     invoke DrawInfo, pRenderer, pGame
     invoke DrawNextPiece, pRenderer, addr [edi].GAME_STATE.nextPiece
@@ -403,6 +404,145 @@ DrawBoard proc pRenderer:DWORD, pGame:DWORD
     pop esi
     ret
 DrawBoard endp
+
+; Draw ghost piece preview at landing position
+; Draw ghost piece preview at landing position
+DrawGhostPiece proc pRenderer:DWORD, pGame:DWORD
+    local ghostPiece:PIECE
+    local rect:RECT
+    local px:DWORD
+    local py:DWORD
+    local hbrGhost:HBRUSH
+    local hOldBrush:DWORD
+    push esi
+    push edi
+    push ebx
+    mov esi, pRenderer
+    mov edi, pGame
+
+    ; Skip if game over or paused
+    mov al, [edi].GAME_STATE.gameOver
+    test al, al
+    jnz @exit
+    mov al, [edi].GAME_STATE.paused
+    test al, al
+    jnz @exit
+
+    ; Skip if ghost disabled
+    mov al, [edi].GAME_STATE.showGhost
+    test al, al
+    jz @exit
+
+    ; Copy currentPiece to local ghost structure
+    push esi
+    push edi
+    lea esi, [edi].GAME_STATE.currentPiece
+    lea edi, ghostPiece
+    mov ecx, sizeof PIECE / 4
+@copy_loop:
+    mov eax, [esi]
+    mov [edi], eax
+    add esi, 4
+    add edi, 4
+    dec ecx
+    jnz @copy_loop
+    pop edi
+    pop esi
+
+    ; Find landing position by moving down until collision
+    lea ebx, ghostPiece
+@find_landing:
+    inc [ebx].PIECE.y
+    invoke CheckCollision, pGame, ebx
+    test eax, eax
+    jz @find_landing
+
+    ; Back up one row to last valid position
+    dec [ebx].PIECE.y
+
+    ; Skip drawing if ghost is at same position as current piece
+    lea eax, [edi].GAME_STATE.currentPiece
+    mov edx, [eax].PIECE.y
+    cmp edx, [ebx].PIECE.y
+    jge @exit
+
+    ; Set background mode for hatch pattern rendering
+    invoke SetBkMode, [esi].RENDERER_STATE.hdcMem, OPAQUE
+    invoke SetBkColor, [esi].RENDERER_STATE.hdcMem, 00181818h
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00484848h
+
+    ; Create hatch brush for ghost appearance
+    invoke CreateHatchBrush, HS_DIAGCROSS, 00484848h
+    mov hbrGhost, eax
+
+    ; Select ghost brush and save previous
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, eax
+    mov hOldBrush, eax
+
+    ; Get ghost world position
+    mov eax, [ebx].PIECE.x
+    mov px, eax
+    mov eax, [ebx].PIECE.y
+    mov py, eax
+
+    ; Draw all 4 blocks
+    xor ecx, ecx
+@@loop_blocks:
+    cmp ecx, 4
+    jge @@loop_done
+
+    push ecx
+    mov eax, [ebx + PIECE.blocks + ecx*8]
+    add eax, px
+    mov edx, [ebx + PIECE.blocks + ecx*8 + 4]
+    add edx, py
+
+    ; Skip blocks above top of screen
+    cmp edx, 0
+    jl @@skip_draw
+
+    ; Calculate block rectangle with gap
+    push eax
+    imul eax, BLOCK_SIZE
+    add eax, BOARD_X
+    inc eax
+    mov rect.left, eax
+
+    imul edx, BLOCK_SIZE
+    add edx, BOARD_Y
+    inc edx
+    mov rect.top, edx
+
+    pop eax
+    inc eax
+    imul eax, BLOCK_SIZE
+    add eax, BOARD_X
+    dec eax
+    mov rect.right, eax
+
+    mov eax, rect.top
+    add eax, BLOCK_SIZE - 2
+    mov rect.bottom, eax
+
+    ; Fill with hatch brush
+    invoke FillRect, [esi].RENDERER_STATE.hdcMem, addr rect, hbrGhost
+
+@@skip_draw:
+    pop ecx
+    inc ecx
+    jmp @@loop_blocks
+
+@@loop_done:
+    ; Restore previous brush and cleanup
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldBrush
+    invoke DeleteObject, hbrGhost
+
+@exit:
+    pop ebx
+    pop edi
+    pop esi
+    ret
+DrawGhostPiece endp
 
 ; Draw current falling piece
 DrawPiece proc pRenderer:DWORD, pPiece:DWORD
