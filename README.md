@@ -55,12 +55,30 @@ Unlike traditional implementations using `.ini` or `.cfg` files, this project ut
 
 ### Compilation Process
 The build process uses the Microsoft Macro Assembler (`ml.exe`) and Linker (`link.exe`).
-
 ```batch
 :: Assemble modules
 ml /c /coff /Cp /nologo main.asm game.asm render.asm registry.asm
 
 :: Link objects into a standalone GUI executable
 link /SUBSYSTEM:WINDOWS /ENTRY:start /NOLOGO /OUT:tetris.exe *.obj
-Execution of compile.bat will automate this process and produce tetris.exe.🎮 ControlsKeyActionLeft / RightMove TetrominoUpRotateDownSoft DropSpaceHard Drop (Instant)PPause / ResumeF2New GameESCExitAuthor: Marek WesołowskiWebsite: https://kvc.pl
-License: MIT
+```
+
+Execution of `compile.bat` will automate this process and produce `tetris.exe`.
+
+## 🎮 Controls
+
+| Key | Action |
+| :--- | :--- |
+| Left / Right | Move Tetromino |
+| Up | Rotate |
+| Down | Soft Drop |
+| Space | Hard Drop (Instant) |
+| P | Pause / Resume |
+| F2 | New Game |
+| ESC | Exit |
+
+---
+
+**Author:** Marek Wesołowski  
+**Website:** https://kvc.pl  
+**License:** MIT
