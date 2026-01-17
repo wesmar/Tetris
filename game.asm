@@ -63,19 +63,19 @@ InitGame proc pGame:DWORD, boardWidth:DWORD, boardHeight:DWORD
     mov [esi].GAME_STATE.boardHeight, 20
     
 @@dimensions_ok:
-    
+
     ; Reset game metrics
     mov [esi].GAME_STATE.score, 0
     mov [esi].GAME_STATE.lines, 0
     mov [esi].GAME_STATE.level, 1
     mov [esi].GAME_STATE.gameOver, 0
     mov [esi].GAME_STATE.paused, 0
-    
+
     ; Clear board memory
     push esi
     lea eax, [esi].GAME_STATE.board
-    mov ecx, boardHeight
-    imul ecx, boardWidth
+    mov ecx, [esi].GAME_STATE.boardHeight
+    imul ecx, [esi].GAME_STATE.boardWidth
     xor edx, edx
 @@:
     mov byte ptr [eax], dl              ; Set cell to empty (0)
@@ -369,26 +369,26 @@ LockPiece proc pGame:DWORD
     push edi
     push ebx
     mov esi, pGame
-    
+
     ; Get piece data
     lea edi, [esi].GAME_STATE.currentPiece
     movzx ebx, [edi].PIECE.color
     mov edx, [edi].PIECE.x
     mov eax, [edi].PIECE.y
-    
+
     ; Write all 4 blocks to board
     xor ecx, ecx
 .WHILE ecx < 4
     push eax
     push ecx
     push edx
-    
+
     ; Calculate block position
     mov eax, [edi + PIECE.blocks + ecx*8]
     add eax, edx
     mov edx, [edi + PIECE.blocks + ecx*8 + 4]
     add edx, [esp+8]
-    
+
     ; Write color to board[y * width + x]
     push eax
     imul edx, [esi].GAME_STATE.boardWidth
@@ -396,21 +396,21 @@ LockPiece proc pGame:DWORD
     lea eax, [esi].GAME_STATE.board
     mov byte ptr [eax + edx], bl
     pop eax
-    
+
     pop edx
     pop ecx
     pop eax
     inc ecx
 .ENDW
-    
+
     ; Clear completed lines and get count
     invoke ClearFullLines, pGame
     mov ecx, eax
-    
+
     ; Update score if lines were cleared
     .IF ecx > 0
         add [esi].GAME_STATE.lines, ecx
-        
+
         ; Score = lines² * 100 * level
         push ecx
         imul ecx, ecx
@@ -418,7 +418,7 @@ LockPiece proc pGame:DWORD
         imul ecx, [esi].GAME_STATE.level
         add [esi].GAME_STATE.score, ecx
         pop ecx
-        
+
         ; Level up every 10 lines
         mov eax, [esi].GAME_STATE.lines
         xor edx, edx
@@ -426,17 +426,17 @@ LockPiece proc pGame:DWORD
         div ecx
         inc eax
         mov [esi].GAME_STATE.level, eax
-        
+
         ; Update high score if beaten
         mov eax, [esi].GAME_STATE.score
         .IF eax > [esi].GAME_STATE.highScore
             invoke SaveHighScore, pGame
         .ENDIF
     .ENDIF
-    
+
     ; Spawn next piece
     invoke SpawnNewPiece, pGame
-    
+
     pop ebx
     pop edi
     pop esi
@@ -450,11 +450,11 @@ ClearFullLines proc pGame:DWORD
     push edi
     push ebx
     mov esi, pGame
-    
+
     xor ebx, ebx                        ; Lines cleared counter
     mov ecx, [esi].GAME_STATE.boardHeight
     dec ecx
-    
+
     ; Scan from bottom to top
 .WHILE SDWORD PTR ecx >= 0
     push ecx
@@ -462,7 +462,7 @@ ClearFullLines proc pGame:DWORD
     imul edi, [esi].GAME_STATE.boardWidth
     lea eax, [esi].GAME_STATE.board
     add edi, eax
-    
+
     ; Check if line is full
     mov edx, 1
     push ecx
@@ -478,10 +478,10 @@ ClearFullLines proc pGame:DWORD
     xor edx, edx
 @isfull:
     pop ecx
-    
+
     .IF edx
         inc ebx                         ; Increment cleared counter
-        
+
         ; Shift all rows above down by one
         push ecx
 .WHILE SDWORD PTR ecx > 0
@@ -491,11 +491,11 @@ ClearFullLines proc pGame:DWORD
         dec ecx
         mov eax, ecx
         imul eax, [esi].GAME_STATE.boardWidth
-        
+
         lea edx, [esi].GAME_STATE.board
         add edi, edx
         add eax, edx
-        
+
         ; Copy row[y-1] to row[y]
         push ecx
         xor ecx, ecx
@@ -506,12 +506,12 @@ ClearFullLines proc pGame:DWORD
         cmp ecx, [esi].GAME_STATE.boardWidth
         jl @B
         pop ecx
-        
+
         pop ecx
         dec ecx
 .ENDW
         pop ecx
-        
+
         ; Clear top row
         lea edi, [esi].GAME_STATE.board
         push ecx
@@ -522,15 +522,15 @@ ClearFullLines proc pGame:DWORD
         cmp ecx, [esi].GAME_STATE.boardWidth
         jl @B
         pop ecx
-        
+
         ; Re-check same row (shifted down)
         inc ecx
     .ENDIF
-    
+
     pop ecx
     dec ecx
 .ENDW
-    
+
     mov eax, ebx
     pop ebx
     pop edi
