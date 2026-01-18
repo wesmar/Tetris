@@ -18,7 +18,7 @@ BLOCK_SIZE equ 25                       ; Pixel size of each tetromino block
 BOARD_X equ 20                          ; Board top-left X position
 BOARD_Y equ 20                          ; Board top-left Y position
 INFO_X equ 300                          ; Info panel X position
-INFO_Y equ 20                           ; Info panel Y position
+INFO_Y equ 50                           ; Info panel Y position
 GAME_AREA_HEIGHT equ 520
 
 .data
@@ -32,6 +32,12 @@ szAuthor db "Author:", 0
 szName db "Marek Wesolowski", 0
 szEmail db "marek@wesolowski.eu.org", 0
 szWebsite db "https://kvc.pl", 0
+szControls db "Controls:", 0
+szCtrlF2 db "F2 - New Game", 0
+szCtrlP db "P - Pause/Resume", 0
+szCtrlArrows db "Arrows - Move/Rotate", 0
+szCtrlSpace db "Space - Hard Drop", 0
+szCtrlEsc db "ESC - Exit", 0
 szPaused db "PAUSED", 0
 szGameOver db "GAME OVER!", 0
 ; Color palette (BGR format for Windows GDI)
@@ -61,6 +67,7 @@ InitRenderer proc pRenderer:DWORD, hwnd:DWORD
     mov [esi].RENDERER_STATE.hbmOld, 0
     mov [esi].RENDERER_STATE.wWidth, 0
     mov [esi].RENDERER_STATE.wHeight, 0
+	mov [esi].RENDERER_STATE.pausePulse, 0
     
     ; Create fonts for different UI elements
     invoke CreateFont, 20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
@@ -625,6 +632,7 @@ DrawPiece endp
 DrawNextPiece proc pRenderer:DWORD, pPiece:DWORD
     local rect:RECT
     local hOldFont:HFONT
+    local nextColor:DWORD
     push esi
     push edi
     push ebx
@@ -633,14 +641,23 @@ DrawNextPiece proc pRenderer:DWORD, pPiece:DWORD
     
     ; Set text rendering mode
     invoke SetBkMode, [esi].RENDERER_STATE.hdcMem, TRANSPARENT
-    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh
+    
+    ; Get piece color from color table
+    movzx eax, [edi].PIECE.color
+    and eax, 7
+    lea ecx, colorTable
+    mov eax, [ecx + eax*4]
+    mov nextColor, eax
+    
+    ; Set text color to match piece color
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, nextColor
     
     ; Draw "Next:" label
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontNormal
     mov hOldFont, eax
     
     invoke lstrlen, offset szNext
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 150, offset szNext, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 135, offset szNext, eax
     
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
     
@@ -665,7 +682,7 @@ DrawNextPiece proc pRenderer:DWORD, pPiece:DWORD
     
     mov edx, [edi + PIECE.blocks + ecx*8 + 4]
     imul edx, BLOCK_SIZE
-    add edx, INFO_Y + 180
+    add edx, INFO_Y + 170
     inc edx
     mov rect.top, edx
     
@@ -689,10 +706,10 @@ DrawNextPiece proc pRenderer:DWORD, pPiece:DWORD
     ret
 DrawNextPiece endp
 
-; Draw score, lines, level, high score, and game state messages
+; Draw game statistics, controls guide, and status overlays
 DrawInfo proc pRenderer:DWORD, pGame:DWORD
     local buffer[64]:WORD
-	local ansiBuffer[128]:BYTE
+    local ansiBuffer[128]:BYTE
     local hOldFont:HFONT
     local rect:RECT
     local hpenSep:HPEN
@@ -704,36 +721,61 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     mov esi, pRenderer
     mov edi, pGame
     
-    ; Setup text rendering
+    ; Configure transparent text rendering
     invoke SetBkMode, [esi].RENDERER_STATE.hdcMem, TRANSPARENT
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh
     
+    ; Draw controls section header
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontSmall
+    mov hOldFont, eax
+    
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0080FF80h
+    invoke lstrlen, offset szControls
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, 20, offset szControls, eax
+    
+    ; Draw keyboard shortcuts in gray
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00C0C0C0h
+    
+    invoke lstrlen, offset szCtrlF2
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 36, offset szCtrlF2, eax
+    invoke lstrlen, offset szCtrlP
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 49, offset szCtrlP, eax
+    invoke lstrlen, offset szCtrlArrows
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 62, offset szCtrlArrows, eax
+    invoke lstrlen, offset szCtrlSpace
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 75, offset szCtrlSpace, eax
+    invoke lstrlen, offset szCtrlEsc
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 88, offset szCtrlEsc, eax
+    
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh
+    
+    ; Switch to normal font for game stats
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontNormal
     mov hOldFont, eax
     
-    ; Draw score
+    ; Display current score
     invoke wsprintf, addr buffer, offset szScore, [edi].GAME_STATE.score
-    invoke lstrlen, addr buffer
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y, addr buffer, eax
-    
-    ; Draw lines
-    invoke wsprintf, addr buffer, offset szLines, [edi].GAME_STATE.lines
-    invoke lstrlen, addr buffer
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 30, addr buffer, eax
-    
-    ; Draw level
-    invoke wsprintf, addr buffer, offset szLevel, [edi].GAME_STATE.level
     invoke lstrlen, addr buffer
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 60, addr buffer, eax
     
-    ; Draw high score in gold color
-	invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0000D7FFh
+    ; Display lines cleared
+    invoke wsprintf, addr buffer, offset szLines, [edi].GAME_STATE.lines
+    invoke lstrlen, addr buffer
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 85, addr buffer, eax
+    
+    ; Display current level
+    invoke wsprintf, addr buffer, offset szLevel, [edi].GAME_STATE.level
+    invoke lstrlen, addr buffer
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 110, addr buffer, eax
+    
+    ; Display high score in gold
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0000D7FFh
     invoke wsprintf, addr buffer, offset szRecord, [edi].GAME_STATE.highScore
     invoke lstrlen, addr buffer
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 100, addr buffer, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 260, addr buffer, eax
     
-    ; Draw high scorer name below record score
-    ; Convert Unicode to ANSI for reliable display
+    ; Display high score holder's name
     lea ebx, [edi].GAME_STATE.highScoreName
     cmp word ptr [ebx], 0
     je @skip_name
@@ -742,7 +784,7 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
            addr ansiBuffer, 128, NULL, NULL
     
     invoke lstrlen, addr ansiBuffer
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 125, 
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 235, 
            addr ansiBuffer, eax
     
 @skip_name:
@@ -750,7 +792,7 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
     
-    ; Draw thin horizontal separator line
+    ; Draw separator line above author info
     invoke CreatePen, PS_SOLID, 1, 00323232h
     mov hpenSep, eax
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, eax
@@ -760,7 +802,7 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hpenOld
     invoke DeleteObject, hpenSep
     
-    ; Draw author info
+    ; Display author credits
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontSmall
     mov hOldFont, eax
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00A0A0A0h
@@ -776,22 +818,52 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
     
-    ; Draw "PAUSED" overlay if paused (not game over)
+	; Show pause overlay when game is paused
     mov al, [edi].GAME_STATE.paused
     test al, al
     jz @F
     mov al, [edi].GAME_STATE.gameOver
     test al, al
     jnz @F
-    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0000FFFFh
+    
+    ; Calculate pulsing color using sine-like pattern
+    ; pausePulse cycles 0-255, we map it to brightness range 128-255
+    mov eax, [esi].RENDERER_STATE.pausePulse
+    add eax, 4                      ; Increment animation counter (speed of pulse)
+    and eax, 0FFh                   ; Wrap around at 256
+    mov [esi].RENDERER_STATE.pausePulse, eax
+    
+    ; Create sine-like wave: abs(128 - value) gives triangle wave 0-128
+    mov ebx, eax
+    sub ebx, 128
+    test ebx, ebx
+    jns @pos
+    neg ebx                         ; Make positive if negative
+@pos:
+    mov eax, 128
+    sub eax, ebx                    ; Now we have 0-128 range
+    add eax, 127                    ; Shift to 127-255 range for good visibility
+    
+    ; Build BGR color: yellow pulsing (00BBGGRR format)
+    ; We keep blue=0, and pulse green and red equally for yellow
+    shl eax, 8                      ; Shift to green channel
+    or eax, eax                     ; Copy to red channel (eax already has value in green)
+    shr eax, 8                      ; Get original value back
+    push ebx
+    mov ebx, eax
+    shl ebx, 8                      ; Green channel
+    or eax, ebx                     ; Combine red and green for yellow
+    pop ebx
+    
+    invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, eax
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontPause
     mov hOldFont, eax
     invoke lstrlen, offset szPaused
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 250, offset szPaused, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, INFO_Y + 420, offset szPaused, eax
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
 @@:
     
-    ; Draw "GAME OVER!" overlay if game over
+    ; Show game over overlay when game ends
     mov al, [edi].GAME_STATE.gameOver
     test al, al
     jz @F
@@ -799,7 +871,7 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontGameOver
     mov hOldFont, eax
     invoke lstrlen, offset szGameOver
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X - 20, INFO_Y + 240, offset szGameOver, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X - 20, INFO_Y + 155, offset szGameOver, eax
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
 @@:
     

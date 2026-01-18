@@ -45,4 +45,5 @@ RENDERER_STATE STRUCT
     hFontPause DWORD ?
     hFontGameOver DWORD ?
     colorBrushes DWORD 8 DUP(?)
+	pausePulse DWORD ?
 RENDERER_STATE ENDS

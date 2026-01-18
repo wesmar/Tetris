@@ -109,7 +109,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     ; Load gamepad icon from shell32.dll (icon index 19)
     invoke LoadLibrary, offset szShell32
     mov hShell, eax
-    invoke ExtractIcon, g_hInstance, offset szShell32, 19
+    invoke ExtractIcon, g_hInstance, offset szShell32, 80
     mov wc.hIcon, eax
     mov wc.hIconSm, eax
     invoke FreeLibrary, hShell
