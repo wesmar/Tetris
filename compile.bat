@@ -24,7 +24,7 @@ if errorlevel 1 goto error
 
 echo.
 echo Linking...
-link /SUBSYSTEM:WINDOWS /ENTRY:start /NOLOGO /OUT:tetris.exe /MERGE:.rdata=.text /ALIGN:16 /OPT:REF /OPT:ICF main.obj game.obj render.obj registry.obj
+link /SUBSYSTEM:WINDOWS /ENTRY:start /NOLOGO /OUT:tetris.exe main.obj game.obj render.obj registry.obj
 if errorlevel 1 goto error
 
 echo.

@@ -524,12 +524,18 @@ ClearFullLines proc pGame:DWORD
         jl @B
         pop ecx
 
-        ; Re-check same row (shifted down)
-        inc ecx
+        ; Re-check same row (lines shifted down)
+        ; Don't decrement ecx - check this position again
+    .ELSE
+        ; Line not full, move to next line up
+        pop ecx
+        dec ecx
+        jmp @skip_pop
     .ENDIF
 
     pop ecx
-    dec ecx
+    ; After clearing, check same position again
+@skip_pop:
 .ENDW
 
     mov eax, ebx
