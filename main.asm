@@ -212,7 +212,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     invoke SendMessage, g_hButtonClear, WM_SETFONT, dword ptr [esp], TRUE
 
     ; Create Ghost toggle button
-    invoke CreateWindowEx, 0, addr szButtonClass, offset szGhostOn,
+    invoke CreateWindowEx, 0, addr szButtonClass, offset szGhostOff,
         WS_CHILD or WS_VISIBLE or BS_PUSHBUTTON,
         380, 527, 90, 30,
         hwnd, IDC_BUTTON_GHOST, hInst, NULL

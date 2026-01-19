@@ -731,7 +731,17 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 0080FF80h
     invoke lstrlen, offset szControls
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, 20, offset szControls, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X, 15, offset szControls, eax
+    
+	; Draw separator line after Controls header
+    invoke CreatePen, PS_SOLID, 1, 00323232h
+    mov hpenSep, eax
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, eax
+    mov hpenOld, eax
+    invoke MoveToEx, [esi].RENDERER_STATE.hdcMem, INFO_X - 5, 32, NULL
+    invoke LineTo, [esi].RENDERER_STATE.hdcMem, INFO_X + 165, 32
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hpenOld
+    invoke DeleteObject, hpenSep
     
     ; Draw keyboard shortcuts in gray
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00C0C0C0h
@@ -744,8 +754,18 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 62, offset szCtrlArrows, eax
     invoke lstrlen, offset szCtrlSpace
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 75, offset szCtrlSpace, eax
-    invoke lstrlen, offset szCtrlEsc
+	invoke lstrlen, offset szCtrlEsc
     invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X + 5, 88, offset szCtrlEsc, eax
+    
+    ; Draw separator line after controls section
+    invoke CreatePen, PS_SOLID, 1, 00323232h
+    mov hpenSep, eax
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, eax
+    mov hpenOld, eax
+    invoke MoveToEx, [esi].RENDERER_STATE.hdcMem, INFO_X - 5, 105, NULL
+    invoke LineTo, [esi].RENDERER_STATE.hdcMem, INFO_X + 165, 105
+    invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hpenOld
+    invoke DeleteObject, hpenSep
     
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
     invoke SetTextColor, [esi].RENDERER_STATE.hdcMem, 00FFFFFFh
@@ -871,7 +891,7 @@ DrawInfo proc pRenderer:DWORD, pGame:DWORD
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, [esi].RENDERER_STATE.hFontGameOver
     mov hOldFont, eax
     invoke lstrlen, offset szGameOver
-    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X - 20, INFO_Y + 155, offset szGameOver, eax
+    invoke TextOut, [esi].RENDERER_STATE.hdcMem, INFO_X - 20, INFO_Y + 420, offset szGameOver, eax
     invoke SelectObject, [esi].RENDERER_STATE.hdcMem, hOldFont
 @@:
     
