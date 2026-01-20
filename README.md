@@ -1,5 +1,8 @@
 # Tetris-x86-Assembly
 
+![Tetris Gameplay](images/tetris.gif)
+
+
 A high-performance, lightweight Tetris implementation written in pure x86 Assembly (MASM) utilizing the Win32 API. The project focuses on minimal binary footprint, efficient memory management, and direct OS integration without C Runtime (CRT) dependency.
 
 **Final Binary Size:** ~13 KB  
