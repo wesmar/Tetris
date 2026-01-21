@@ -457,8 +457,10 @@ ClearFullLines proc pGame:DWORD
     dec ecx
 
     ; Scan from bottom to top
-.WHILE SDWORD PTR ecx >= 0
-    push ecx
+@@check_line:
+    cmp ecx, 0
+    jl @@done_clearing
+    
     mov edi, ecx
     imul edi, [esi].GAME_STATE.boardWidth
     lea eax, [esi].GAME_STATE.board
@@ -480,64 +482,64 @@ ClearFullLines proc pGame:DWORD
 @isfull:
     pop ecx
 
-    .IF edx
-        inc ebx                         ; Increment cleared counter
+    test edx, edx
+    jz @@line_not_full
+    
+    inc ebx                             ; Increment cleared counter
 
-        ; Shift all rows above down by one
-        push ecx
-.WHILE SDWORD PTR ecx > 0
-        push ecx
-        mov edi, ecx
-        imul edi, [esi].GAME_STATE.boardWidth
-        dec ecx
-        mov eax, ecx
-        imul eax, [esi].GAME_STATE.boardWidth
+    ; Shift all rows above down by one
+    push ecx
+@@shift_rows:
+    cmp ecx, 0
+    jle @@shift_done
+    
+    mov edi, ecx
+    imul edi, [esi].GAME_STATE.boardWidth
+    mov eax, ecx
+    dec eax
+    imul eax, [esi].GAME_STATE.boardWidth
 
-        lea edx, [esi].GAME_STATE.board
-        add edi, edx
-        add eax, edx
+    lea edx, [esi].GAME_STATE.board
+    add edi, edx
+    add eax, edx
 
-        ; Copy row[y-1] to row[y]
-        push ecx
-        xor ecx, ecx
+    ; Copy row[y-1] to row[y]
+    push ecx
+    xor ecx, ecx
 @@:
-        mov dl, byte ptr [eax + ecx]
-        mov byte ptr [edi + ecx], dl
-        inc ecx
-        cmp ecx, [esi].GAME_STATE.boardWidth
-        jl @B
-        pop ecx
-
-        pop ecx
-        dec ecx
-.ENDW
-        pop ecx
-
-        ; Clear top row
-        lea edi, [esi].GAME_STATE.board
-        push ecx
-        xor ecx, ecx
-@@:
-        mov byte ptr [edi + ecx], 0
-        inc ecx
-        cmp ecx, [esi].GAME_STATE.boardWidth
-        jl @B
-        pop ecx
-
-        ; Re-check same row (lines shifted down)
-        ; Don't decrement ecx - check this position again
-    .ELSE
-        ; Line not full, move to next line up
-        pop ecx
-        dec ecx
-        jmp @skip_pop
-    .ENDIF
-
+    mov dl, byte ptr [eax + ecx]
+    mov byte ptr [edi + ecx], dl
+    inc ecx
+    cmp ecx, [esi].GAME_STATE.boardWidth
+    jl @B
     pop ecx
-    ; After clearing, check same position again
-@skip_pop:
-.ENDW
 
+    dec ecx
+    jmp @@shift_rows
+
+@@shift_done:
+    pop ecx
+
+    ; Clear top row
+    lea edi, [esi].GAME_STATE.board
+    push ecx
+    xor ecx, ecx
+@@:
+    mov byte ptr [edi + ecx], 0
+    inc ecx
+    cmp ecx, [esi].GAME_STATE.boardWidth
+    jl @B
+    pop ecx
+
+    ; Re-check same row (lines shifted down)
+    jmp @@check_line
+
+@@line_not_full:
+    ; Line not full, move to next line up
+    dec ecx
+    jmp @@check_line
+
+@@done_clearing:
     mov eax, ebx
     pop ebx
     pop edi
