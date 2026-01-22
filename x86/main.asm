@@ -2,16 +2,6 @@
 .model flat, stdcall
 option casemap:none
 
-include windows.inc
-include user32.inc
-include gdi32.inc
-include kernel32.inc
-include shell32.inc
-includelib user32.lib
-includelib gdi32.lib
-includelib kernel32.lib
-includelib shell32.lib
-
 include data.inc
 include proto.inc
 
@@ -37,7 +27,7 @@ FRAME_TIME_MS equ 16                    ; ~60 FPS (1000ms / 60)
 
 .data
 szClassName db "TetrisWindowClass", 0
-szWindowTitle db "Tetris - Win32", 0
+szWindowTitle db "Tetris x86", 0
 szShell32 db "shell32.dll", 0
 szPlayerLabel db "Player:", 0
 szPauseGame db "&Pause Game", 0

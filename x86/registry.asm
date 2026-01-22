@@ -2,12 +2,6 @@
 .model flat, stdcall
 option casemap:none
 
-include windows.inc
-include advapi32.inc
-include kernel32.inc
-includelib advapi32.lib
-includelib kernel32.lib
-
 include data.inc
 include proto.inc
 

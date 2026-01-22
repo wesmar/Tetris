@@ -34,16 +34,16 @@ GAME_STATE STRUCT
 GAME_STATE ENDS
 
 RENDERER_STATE STRUCT
-    hwnd DWORD ?
-    hdcMem DWORD ?
-    hbmMem DWORD ?
-    hbmOld DWORD ?
+    hwnd QWORD ?
+    hdcMem QWORD ?
+    hbmMem QWORD ?
+    hbmOld QWORD ?
     wWidth DWORD ?
     wHeight DWORD ?
-    hFontNormal DWORD ?
-    hFontSmall DWORD ?
-    hFontPause DWORD ?
-    hFontGameOver DWORD ?
-    colorBrushes DWORD 8 DUP(?)
-	pausePulse DWORD ?
+    hFontNormal QWORD ?
+    hFontSmall QWORD ?
+    hFontPause QWORD ?
+    hFontGameOver QWORD ?
+    colorBrushes QWORD 8 DUP(?)
+    pausePulse DWORD ?
 RENDERER_STATE ENDS
