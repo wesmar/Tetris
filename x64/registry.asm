@@ -56,7 +56,7 @@ SavePlayerName PROC pName:QWORD
     mov QWORD PTR [rsp+20h], 0       ; Reserved
     mov QWORD PTR [rsp+28h], 20006h  ; KEY_WRITE access
     mov QWORD PTR [rsp+30h], 0       ; lpSecurityAttributes = NULL
-    lea rax, [rsp+50h]
+    lea rax, [rsp+50h]               ; hKey at [rsp+50h]
     mov QWORD PTR [rsp+38h], rax     ; phkResult = &hKey (local var)
     mov QWORD PTR [rsp+40h], 0       ; lpdwDisposition = NULL
 
@@ -68,38 +68,41 @@ SavePlayerName PROC pName:QWORD
     call StrLenW
     inc eax
     shl eax, 1
-    mov [rsp+58h], eax
+    mov [rsp+58h], eax               ; size at [rsp+58h]
 
-    mov rcx, [rsp+50h]
+    mov rcx, [rsp+50h]               ; hKey from [rsp+50h]
     lea rdx, szPlayerName
     xor r8d, r8d
     mov r9d, 1
     mov [rsp+20h], rsi
-    mov eax, [rsp+58h]
+    mov eax, [rsp+58h]               ; size from [rsp+58h]
     mov [rsp+28h], rax
 
     call RegSetValueExW
-    mov [rsp+5Ch], eax
+    mov [rsp+5Ch], eax               ; result at [rsp+5Ch]
 
-    mov rcx, [rsp+50h]
+    mov rcx, [rsp+50h]               ; hKey from [rsp+50h]
     call RegCloseKey
-    
-    mov eax, [rsp+5Ch]
+
+    mov eax, [rsp+5Ch]               ; result from [rsp+5Ch]
     test eax, eax
     jnz @@fail
-    
+
     mov eax, 1
     jmp @@exit
-    
+
 @@fail:
     xor eax, eax
-    
+
 @@exit:
     add rsp, 60h
     pop rsi
     ret
 SavePlayerName ENDP
 
+; Load player name from registry into game state
+; Returns: EAX = 1 if found, 0 if not found or error
+; RCX = pGame
 LoadPlayerName PROC pGame:QWORD
     push rsi
     push rdi
@@ -172,11 +175,15 @@ LoadPlayerName PROC pGame:QWORD
     ret
 LoadPlayerName ENDP
 
+; Save current score as high score to registry with player name
+; Copies playerName to highScoreName (or "Anonymous" if empty)
+; Returns: EAX = 1 on success, 0 on failure
+; RCX = pGame
 SaveHighScore PROC pGame:QWORD
     push rsi
     push rdi
     push rbx
-    sub rsp, 60h
+    sub rsp, 60h                     ; Shadow space + locals
 
     mov rsi, rcx
 
@@ -187,7 +194,7 @@ SaveHighScore PROC pGame:QWORD
     mov QWORD PTR [rsp+20h], 0
     mov QWORD PTR [rsp+28h], 20006h
     mov QWORD PTR [rsp+30h], 0
-    lea rax, [rsp+50h]
+    lea rax, [rsp+50h]               ; hKey at [rsp+50h]
     mov QWORD PTR [rsp+38h], rax
     mov QWORD PTR [rsp+40h], 0
 
@@ -196,13 +203,13 @@ SaveHighScore PROC pGame:QWORD
     jnz @@fail
 
     mov eax, [rsi].GAME_STATE.score
-    mov [rsp+58h], eax
+    mov [rsp+58h], eax               ; score at [rsp+58h]
 
-    mov rcx, [rsp+50h]
+    mov rcx, [rsp+50h]               ; hKey from [rsp+50h]
     lea rdx, szHighScore
     xor r8d, r8d
     mov r9d, 4
-    lea rax, [rsp+58h]
+    lea rax, [rsp+58h]               ; score address at [rsp+58h]
     mov [rsp+20h], rax
     mov QWORD PTR [rsp+28h], 4
 
@@ -252,7 +259,7 @@ SaveHighScore PROC pGame:QWORD
     shl eax, 1
     mov rbx, rax
 
-    mov rcx, [rsp+50h]
+    mov rcx, [rsp+50h]               ; hKey from [rsp+50h]
     lea rdx, szHighScoreName
     xor r8d, r8d
     mov r9d, 1
@@ -263,14 +270,14 @@ SaveHighScore PROC pGame:QWORD
     call RegSetValueExW
 
 @@close_fail:
-    mov [rsp+5Ch], eax
-    mov rcx, [rsp+50h]
+    mov [rsp+5Ch], eax               ; result at [rsp+5Ch]
+    mov rcx, [rsp+50h]               ; hKey from [rsp+50h]
     call RegCloseKey
-    mov eax, [rsp+5Ch]
+    mov eax, [rsp+5Ch]               ; result from [rsp+5Ch]
 
     test eax, eax
     jnz @@fail
-    
+
     mov eax, 1
     jmp @@exit
 
@@ -285,6 +292,10 @@ SaveHighScore PROC pGame:QWORD
     ret
 SaveHighScore ENDP
 
+; Load high score and associated name from registry into game state
+; Initializes to 0 and empty name if registry key not found
+; Returns: EAX = 1 if found, 0 if not found
+; RCX = pGame
 LoadHighScore PROC pGame:QWORD
     push rsi
     push rdi

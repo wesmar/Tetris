@@ -2,12 +2,30 @@
 
 ![Tetris Gameplay](images/tetris.gif)
 
+## 📅 Update 25.01.2026 — x64 Visual Enhancements
+
+The x64 version received significant visual and UX improvements, leveraging modern Windows 11 APIs while maintaining the lightweight assembly approach:
+
+| Feature | Description |
+| :--- | :--- |
+| **Mica Backdrop Effect** | Dark mode title bar with Windows 11 Mica material (`DWMWA_USE_IMMERSIVE_DARK_MODE` + `DWMWA_SYSTEMBACKDROP_TYPE`) for a sleek, modern appearance |
+| **Segoe UI Typography** | All UI elements now use the Segoe UI font family with proper weight variations for improved readability |
+| **Green Player Field** | Player name input field changes to light green (`#E0FFE0`) when text is entered, providing visual feedback that the name is set |
+| **Gold Line Clear Animation** | Clearing lines triggers a smooth 300ms fade-out animation from gold (`RGB 255,215,0`) to black, replacing instant row removal |
+| **Modern Button Styling** | Buttons use smaller, cleaner font styling consistent with Windows 11 design language |
+| **Resource Files** | Added `tetris.rc` (resource script) and `tetris.manifest` (application manifest for DPI awareness and visual styles) |
+
+**Binary size impact:** x64 binary increased from ~15 KB to ~18 KB (+20%) due to DWM API integration and animation code.
+
+> **Note:** These enhancements are exclusive to the x64 version. The x86 version remains unchanged at ~13 KB with classic Windows styling. The x64 implementation demonstrates more advanced Win32/DWM techniques due to the additional complexity already inherent in 64-bit assembly programming.
+
+---
 
 A high-performance, lightweight Tetris implementation written in pure Assembly (MASM) utilizing the Windows API. The project focuses on minimal binary footprint, efficient memory management, and direct OS integration without C Runtime (CRT) dependency.
 
 Available in two architectures:
 - **x86 (32-bit):** ~13 KB binary
-- **x64 (64-bit):** ~15 KB binary
+- **x64 (64-bit):** ~18 KB binary
 
 **Subsystem:** Windows (GUI)
 
@@ -20,8 +38,8 @@ Available in two architectures:
 ### Binary & Source Code Metrics
 | Metric | x86 (32-bit) | x64 (64-bit) | Notes |
 | :--- | :--- | :--- | :--- |
-| **Final Binary Size** | ~13 KB | ~15 KB | +15% size increase due to 64-bit pointers and alignment |
-| **Source Code Lines** | ~2,400 LOC | ~2,600 LOC | +8% lines for manual calling convention management |
+| **Final Binary Size** | ~13 KB | ~18 KB | +38% size increase due to 64-bit pointers, alignment, and DWM/Mica integration |
+| **Source Code Lines** | ~2,400 LOC | ~3000 LOC | +20% lines for manual calling convention management |
 | **Calling Convention** | `stdcall` | Microsoft x64 (`fastcall`) | Fundamental architectural difference |
 
 ### Key Technical Differences
@@ -138,10 +156,12 @@ Tetris_asm/
 │   ├── render.asm       # GDI rendering (shadow space management)
 │   ├── registry.asm     # Registry operations (64-bit pointers)
 │   ├── data.inc         # Structures (8-byte alignment)
-│   └── proto.inc        # Procedure prototypes (fastcall)
+│   ├── proto.inc        # Procedure prototypes (fastcall)
+│   ├── tetris.rc        # Resource script (icon, manifest)
+│   └── tetris.manifest  # Application manifest (DPI, visual styles)
 ├── bin/                  # Output directory (created by build script)
 │   ├── tetris.exe       # x86 binary (~13 KB)
-│   └── tetris64.exe     # x64 binary (~15 KB)
+│   └── tetris64.exe     # x64 binary (~18 KB)
 └── build.ps1            # Unified PowerShell build script for both versions
 ```
 
@@ -155,6 +175,8 @@ Tetris_asm/
 | `registry.asm` | Low-level wrapper for `advapi32` functions to handle persistent data storage (High Score, Player Name). |
 | `data.inc` | Structure definitions (`GAME_STATE`, `PIECE`, `RENDERER_STATE`) and constant declarations. |
 | `proto.inc` | Procedure prototypes for inter-modular communication. |
+| `tetris.rc` | (x64 only) Resource script linking icon and application manifest. |
+| `tetris.manifest` | (x64 only) Application manifest enabling DPI awareness, visual styles, and Windows 11 features. |
 | `build.ps1` | PowerShell script that builds both x86 and x64 versions using Visual Studio 2026 toolchain. |
 
 ## 🔧 Build Instructions
@@ -175,14 +197,14 @@ A single PowerShell script builds both x86 and x64 versions simultaneously:
 
 The script will:
 1. Build x86 version from `x86/` directory → `bin/tetris.exe` (~13 KB)
-2. Build x64 version from `x64/` directory → `bin/tetris64.exe` (~15 KB)
+2. Build x64 version from `x64/` directory → `bin/tetris64.exe` (~18 KB)
 3. Automatically clean up object files
 
 **Output:**
 ```
 bin/
   ├── tetris.exe      (x86, ~13 KB)
-  └── tetris64.exe    (x64, ~15 KB)
+  └── tetris64.exe    (x64, ~18 KB)
 ```
 
 ### Manual Build Process
@@ -219,7 +241,7 @@ ml64 /c /Cp /Cx /Zd /Zf /Zi registry.asm
 link main.obj game.obj render.obj registry.obj /subsystem:windows /entry:start /out:tetris64.exe
 ```
 
-Output: `tetris64.exe` (~15 KB)
+Output: `tetris64.exe` (~18 KB)
 
 **Technical Note:** The x64 version requires significantly more manual code for API calls due to the lack of `invoke` macro support and mandatory shadow space allocation (32 bytes per call).
 
@@ -287,21 +309,22 @@ Use **Resource Hacker** to browse available icons and their indices in these fil
 1. Clear backbuffer (dark gray 0x141414)
 2. Draw grid lines (0x323232)
 3. Draw locked blocks from board array
-4. Draw ghost piece (hatch pattern, conditional)
-5. Draw current falling piece
-6. Draw next piece preview (color-matched)
-7. Draw statistics and controls guide
-8. Draw overlays (PAUSED pulsing text / GAME OVER)
-9. BitBlt backbuffer to screen (single operation, no flicker)
+4. Draw line clear animation overlay (x64: gold-to-black fade, 300ms)
+5. Draw ghost piece (hatch pattern, conditional)
+6. Draw current falling piece
+7. Draw next piece preview (color-matched)
+8. Draw statistics and controls guide
+9. Draw overlays (PAUSED pulsing text / GAME OVER)
+10. BitBlt backbuffer to screen (single operation, no flicker)
 
 ---
 
 ## 💡 Which Version Should You Use?
 
-- **x86 (32-bit):** Compatible with both 32-bit and 64-bit Windows systems. Slightly smaller binary size (~13 KB). Recommended for maximum compatibility.
-- **x64 (64-bit):** Native 64-bit application. Required for systems where 32-bit subsystem is disabled. Slightly larger binary (~15 KB) but demonstrates advanced assembly techniques.
+- **x86 (32-bit):** Compatible with both 32-bit and 64-bit Windows systems. Smaller binary size (~13 KB). Classic Windows styling. Recommended for maximum compatibility.
+- **x64 (64-bit):** Native 64-bit application with modern Windows 11 visual enhancements (Mica backdrop, line clear animations, green player field). Larger binary (~18 KB) but demonstrates advanced assembly techniques including DWM API integration.
 
-Both versions are functionally identical and provide the same gameplay experience.
+Both versions provide the same core gameplay experience. The x64 version offers enhanced visuals on Windows 11.
 
 ---
 

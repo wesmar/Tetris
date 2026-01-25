@@ -4,14 +4,26 @@ Write-Host "Building Tetris x86 and x64" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ML = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x86\ml.exe"
-$ML64 = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\ml64.exe"
-$LINK32 = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x86\link.exe"
-$LINK64 = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe"
-$LIBPATH32_UM = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x86"
-$LIBPATH32_UCRT = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x86"
-$LIBPATH64_UM = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
-$LIBPATH64_UCRT = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64"
+# MSVC tools paths
+$VSBASE = "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64"
+$ML = "$VSBASE\x86\ml.exe"
+$ML64 = "$VSBASE\x64\ml64.exe"
+$LINK32 = "$VSBASE\x86\link.exe"
+$LINK64 = "$VSBASE\x64\link.exe"
+
+# Windows SDK paths (for mt.exe and rc.exe)
+$SDKBIN = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64"
+$SDKINCLUDE = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+
+# Add tools to PATH
+$env:PATH += ";$VSBASE\x64;$SDKBIN"
+
+# Windows SDK library paths
+$SDKBASE = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0"
+$LIBPATH32_UM = "$SDKBASE\um\x86"
+$LIBPATH32_UCRT = "$SDKBASE\ucrt\x86"
+$LIBPATH64_UM = "$SDKBASE\um\x64"
+$LIBPATH64_UCRT = "$SDKBASE\ucrt\x64"
 
 # Build x86 version
 Write-Host "[1/2] Building x86 version..." -ForegroundColor Yellow
@@ -29,7 +41,14 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x86 build failed!" -
 & $ML /c /Cp /Cx /Zd /Zf /Zi registry.asm
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x86 build failed!" -ForegroundColor Red; exit 1 }
 
-& $LINK32 main.obj game.obj render.obj registry.obj /subsystem:windows /entry:start /out:tetris.exe "/LIBPATH:$LIBPATH32_UM" "/LIBPATH:$LIBPATH32_UCRT" kernel32.lib user32.lib gdi32.lib advapi32.lib shell32.lib
+& $LINK32 main.obj game.obj render.obj registry.obj `
+    /subsystem:windows `
+    /entry:start `
+    /out:tetris.exe `
+    "/LIBPATH:$LIBPATH32_UM" `
+    "/LIBPATH:$LIBPATH32_UCRT" `
+    kernel32.lib user32.lib gdi32.lib advapi32.lib shell32.lib
+
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x86 linking failed!" -ForegroundColor Red; exit 1 }
 
 Write-Host "[x86] Build successful!" -ForegroundColor Green
@@ -40,6 +59,22 @@ Write-Host ""
 Write-Host "[2/2] Building x64 version..." -ForegroundColor Yellow
 Push-Location x64
 
+# Set include paths for resource compiler
+$env:INCLUDE = "$SDKINCLUDE\um;$SDKINCLUDE\shared;$SDKINCLUDE\ucrt"
+
+# Compile resource file with UTF-8 encoding
+Write-Host "Compiling resources..." -ForegroundColor Cyan
+& rc /c65001 ..\tetris.rc
+if ($LASTEXITCODE -ne 0) { 
+    Pop-Location
+    Write-Host "ERROR: Resource compilation failed!" -ForegroundColor Red
+    exit 1 
+}
+
+# Move compiled resource to x64 folder
+Move-Item -Path "..\tetris.res" -Destination "tetris.res" -Force
+
+# Assemble x64 source files
 & $ML64 /c /Cp /Cx /Zd /Zf /Zi main.asm
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -ForegroundColor Red; exit 1 }
 
@@ -52,23 +87,34 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -
 & $ML64 /c /Cp /Cx /Zd /Zf /Zi registry.asm
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -ForegroundColor Red; exit 1 }
 
-& $LINK64 main.obj game.obj render.obj registry.obj /subsystem:windows /entry:start /out:tetris64.exe "/LIBPATH:$LIBPATH64_UM" "/LIBPATH:$LIBPATH64_UCRT" kernel32.lib user32.lib gdi32.lib advapi32.lib shell32.lib
+# Link with resource file embedded
+& $LINK64 main.obj game.obj render.obj registry.obj tetris.res `
+    /subsystem:windows `
+    /entry:start `
+    /out:tetris64.exe `
+    /MANIFEST:EMBED `
+    /MANIFESTINPUT:..\tetris.manifest `
+    "/LIBPATH:$LIBPATH64_UM" `
+    "/LIBPATH:$LIBPATH64_UCRT" `
+    kernel32.lib user32.lib gdi32.lib advapi32.lib shell32.lib
+
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 linking failed!" -ForegroundColor Red; exit 1 }
 
 Write-Host "[x64] Build successful!" -ForegroundColor Green
 Pop-Location
 
-# Move binaries to bin folder
+# Create bin folder and move binaries
 Write-Host ""
 Write-Host "Moving binaries to bin folder..." -ForegroundColor Yellow
 if (!(Test-Path "bin")) { New-Item -ItemType Directory -Path "bin" | Out-Null }
 Move-Item -Path "x86\tetris.exe" -Destination "bin\tetris.exe" -Force
 Move-Item -Path "x64\tetris64.exe" -Destination "bin\tetris64.exe" -Force
 
-# Clean up object files
-Write-Host "Cleaning up object files..." -ForegroundColor Yellow
+# Clean up intermediate files
+Write-Host "Cleaning up intermediate files..." -ForegroundColor Yellow
 Remove-Item -Path "x86\*.obj" -ErrorAction SilentlyContinue
 Remove-Item -Path "x64\*.obj" -ErrorAction SilentlyContinue
+Remove-Item -Path "x64\*.res" -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
