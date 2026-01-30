@@ -39,7 +39,7 @@ Available in two architectures:
 | Metric | x86 (32-bit) | x64 (64-bit) | Notes |
 | :--- | :--- | :--- | :--- |
 | **Final Binary Size** | ~13 KB | ~18 KB | +38% size increase due to 64-bit pointers, alignment, and DWM/Mica integration |
-| **Source Code Lines** | ~2,400 LOC | ~3000 LOC | +20% lines for manual calling convention management |
+| **Source Code Lines** | ~2,400 LOC | ~2,600 LOC | +8% lines for manual calling convention management |
 | **Calling Convention** | `stdcall` | Microsoft x64 (`fastcall`) | Fundamental architectural difference |
 
 ### Key Technical Differences

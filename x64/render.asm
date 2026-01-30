@@ -397,11 +397,16 @@ RenderGame PROC pRenderer:QWORD, pGame:QWORD, hdc:QWORD
     mov rcx, rsi
     mov rdx, rdi
     call DrawBoard
-    
+
+    ; Render explosion particles
+    mov rcx, rsi
+    mov rdx, rdi
+    call RenderParticles
+
     mov rcx, rsi
     mov rdx, rdi
     call DrawGhostPiece
-    
+
     mov rcx, rsi
     lea rdx, [rdi].GAME_STATE.currentPiece
     call DrawPiece

@@ -4,6 +4,18 @@ POINT_STRUCT STRUCT
     y DWORD ?
 POINT_STRUCT ENDS
 
+; Particle structure for explosion effects (16 bytes per particle)
+PARTICLE STRUCT
+    active BYTE ?                    ; 0=inactive, 1=active
+    color BYTE ?                     ; Color index (1-7)
+    life BYTE ?                      ; Lifetime in frames (0-255)
+    padding BYTE ?                   ; Alignment padding
+    x DWORD ?                        ; X position in pixels
+    y DWORD ?                        ; Y position in pixels
+    vx SDWORD ?                      ; X velocity (pixels per 16 frames)
+    vy SDWORD ?                      ; Y velocity (pixels per 16 frames)
+PARTICLE ENDS
+
 ; Tetromino piece structure (48 bytes total)
 ; Contains shape type, position, and 4 block offsets relative to piece origin
 PIECE STRUCT
@@ -42,6 +54,9 @@ GAME_STATE STRUCT
     clearPad    WORD ?               ; Alignment padding
     clearMask   DWORD ?              ; Bitmask of rows to animate (bit y = row y)
     clearTimer  DWORD ?              ; Animation elapsed time in ms
+    ; Particle system for visual effects
+    particles PARTICLE 64 DUP(<>)    ; Array of 64 particles (1024 bytes)
+    particleCount DWORD ?            ; Number of active particles
 GAME_STATE ENDS
 
 ; Renderer state - GDI handles for double-buffered drawing

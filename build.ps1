@@ -87,8 +87,11 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -
 & $ML64 /c /Cp /Cx /Zd /Zf /Zi registry.asm
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -ForegroundColor Red; exit 1 }
 
+& $ML64 /c /Cp /Cx /Zd /Zf /Zi particles.asm
+if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "ERROR: x64 build failed!" -ForegroundColor Red; exit 1 }
+
 # Link with resource file embedded
-& $LINK64 main.obj game.obj render.obj registry.obj tetris.res `
+& $LINK64 main.obj game.obj render.obj registry.obj particles.obj tetris.res `
     /subsystem:windows `
     /entry:start `
     /out:tetris64.exe `

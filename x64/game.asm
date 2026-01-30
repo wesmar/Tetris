@@ -72,6 +72,10 @@ InitGame PROC pGame:QWORD, boardWidth:DWORD, boardHeight:DWORD
     mov DWORD PTR [rsi].GAME_STATE.clearMask, 0
     mov DWORD PTR [rsi].GAME_STATE.clearTimer, 0
 
+    ; Initialize particle system
+    mov rcx, rsi
+    call InitParticles
+
     ; Clear entire board memory to empty (0)
     lea rax, [rsi].GAME_STATE.board
     mov ecx, [rsi].GAME_STATE.boardHeight
@@ -142,6 +146,10 @@ StartGame PROC pGame:QWORD
     mov BYTE PTR [rsi].GAME_STATE.clearCount, 0
     mov DWORD PTR [rsi].GAME_STATE.clearMask, 0
     mov DWORD PTR [rsi].GAME_STATE.clearTimer, 0
+
+    ; Reset particle system
+    mov rcx, rsi
+    call InitParticles
 
     ; Reset 7-bag randomizer for new game
     mov DWORD PTR bagIndex, 7
@@ -434,6 +442,13 @@ ClearFullLines PROC pGame:QWORD
     or [rsi].GAME_STATE.clearMask, eax
     inc ebx                          ; Increment line count
 
+    ; Spawn explosion particles for this line
+    mov [rsp+20h], rcx               ; Save row index
+    mov rcx, rsi                     ; pGame
+    mov edx, [rsp+20h]               ; lineY
+    call SpawnLineExplosion
+    mov rcx, [rsp+20h]               ; Restore row index
+
 @@not_full:
     dec ecx
     jmp @@scan_loop
@@ -620,6 +635,11 @@ UpdateGame PROC pGame:QWORD, deltaTimeMs:DWORD
     call ApplyClearLines
 
 @@anim_done:
+    ; Update particle system
+    mov rcx, rsi
+    mov edx, ebx                         ; deltaTimeMs
+    call UpdateParticles
+
     ; Continue normal gameplay (non-blocking animation)
     mov eax, [rsi].GAME_STATE.level
     dec eax

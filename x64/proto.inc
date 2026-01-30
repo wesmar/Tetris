@@ -95,3 +95,9 @@ LoadPlayerName PROTO pGame:QWORD
 SaveHighScore PROTO pGame:QWORD
 LoadHighScore PROTO pGame:QWORD
 ClearRegistry PROTO
+
+; Particle system functions
+InitParticles PROTO pGame:QWORD
+SpawnLineExplosion PROTO pGame:QWORD, lineY:DWORD
+UpdateParticles PROTO pGame:QWORD, deltaTimeMs:DWORD
+RenderParticles PROTO pRenderer:QWORD, pGame:QWORD
