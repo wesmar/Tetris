@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(fc /N \"C:\\\\Projekty\\\\Tetris_asm\\\\x64\\\\Old\\\\game.asm\" \"C:\\\\Projekty\\\\Tetris_asm\\\\x64\\\\game.asm\")",
+      "Bash(python:*)"
+    ]
+  }
+}

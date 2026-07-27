@@ -1281,6 +1281,8 @@ DrawInfo PROC
     LDRH W9, [X8]
     CBZ W9, di_skip_name
 
+    STRB WZR, [SP, #DI_MB]       ; keep the buffer valid if conversion fails
+
     MOV X0, #0                   ; arg 1: CodePage
     MOV X1, #0                   ; arg 2: dwFlags
     ADD X2, X20, #GAME_STATE_highScoreName ; arg 3: lpWideCharStr
@@ -1290,6 +1292,7 @@ DrawInfo PROC
     MOV X6, #0                   ; arg 7: lpDefaultChar
     MOV X7, #0                   ; arg 8: lpUsedDefaultChar
     BL WideCharToMultiByte
+    CBZ W0, di_skip_name         ; name too long for the buffer, or invalid
 
     ADD X0, SP, #DI_MB
     BL lstrlenA

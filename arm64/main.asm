@@ -140,9 +140,6 @@ g_hEditName     DCQ 0
 g_hBrushGreen   DCQ 0
 g_hFontButtons  DCQ 0
 
-g_msgIndex      DCD 0
-g_msgBuffer     SPACE 256
-
     ALIGN 16
 g_game          SPACE GAME_STATE_SIZE
 
@@ -180,17 +177,6 @@ WindowProc PROC
     MOV X20, X1                  ; uMsg
     MOV X21, X2                  ; wParam
     MOV X22, X3                  ; lParam
-
-    ; Log uMsg to g_msgBuffer
-    LDR X8, =g_msgIndex
-    LDR W9, [X8]
-    CMP W9, #64
-    B.GE wp_log_done
-    LDR X10, =g_msgBuffer
-    STR W20, [X10, W9, UXTW #2]
-    ADD W9, W9, #1
-    STR W9, [X8]
-wp_log_done
 
     CMP W20, #WM_CREATE
     B.EQ wp_create

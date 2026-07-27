@@ -48,6 +48,9 @@ g_hEditName dd 0
 g_hButtonClear dd 0
 g_hButtonStart dd 0
 g_hButtonGhost dd 0
+g_hFontLabel dd 0
+g_hFontEdit dd 0
+g_hFontButtons dd 0
 g_lastTickCount dd 0
 
 .data?
@@ -74,8 +77,6 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     local accel[3]:ACCEL
     local hAccel:HACCEL
     local hLabelName:HWND
-    local hLabelFont:HFONT
-    local hEditFont:HFONT
     local hShell:DWORD
     
     ; Register window class with all properties
@@ -162,7 +163,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     invoke CreateFont, 16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH or FF_DONTCARE, offset szArial
-    mov hLabelFont, eax
+    mov g_hFontLabel, eax
     invoke SendMessage, hLabelName, WM_SETFONT, eax, TRUE
     
     ; Create player name text input box
@@ -176,14 +177,14 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
     invoke CreateFont, 15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH or FF_DONTCARE, offset szArial
-    mov hEditFont, eax
+    mov g_hFontEdit, eax
     invoke SendMessage, g_hEditName, WM_SETFONT, eax, TRUE
 
     ; Create smaller font for buttons
     invoke CreateFont, 13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH or FF_DONTCARE, offset szArial
-    push eax
+    mov g_hFontButtons, eax
 
     ; Create Pause/Resume button
     invoke CreateWindowEx, 0, addr szButtonClass, offset szPauseGame,
@@ -191,7 +192,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
         170, 527, 105, 30,
         hwnd, IDC_BUTTON_START, hInst, NULL
     mov g_hButtonStart, eax
-    invoke SendMessage, g_hButtonStart, WM_SETFONT, dword ptr [esp], TRUE
+    invoke SendMessage, g_hButtonStart, WM_SETFONT, g_hFontButtons, TRUE
 
     ; Create Clear Record button
     invoke CreateWindowEx, 0, addr szButtonClass, offset szClearRecord,
@@ -199,7 +200,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
         280, 527, 95, 30,
         hwnd, IDC_BUTTON_CLEAR, hInst, NULL
     mov g_hButtonClear, eax
-    invoke SendMessage, g_hButtonClear, WM_SETFONT, dword ptr [esp], TRUE
+    invoke SendMessage, g_hButtonClear, WM_SETFONT, g_hFontButtons, TRUE
 
     ; Create Ghost toggle button
     invoke CreateWindowEx, 0, addr szButtonClass, offset szGhostOff,
@@ -207,9 +208,7 @@ WinMain proc hInst:DWORD, hPrevInst:DWORD, lpCmdLine:DWORD, nCmdShow:DWORD
         380, 527, 90, 30,
         hwnd, IDC_BUTTON_GHOST, hInst, NULL
     mov g_hButtonGhost, eax
-    invoke SendMessage, g_hButtonGhost, WM_SETFONT, dword ptr [esp], TRUE
-
-    pop eax
+    invoke SendMessage, g_hButtonGhost, WM_SETFONT, g_hFontButtons, TRUE
     
     ; Load saved player name from registry and display it
     invoke LoadPlayerName, addr g_game
@@ -284,6 +283,20 @@ WindowProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
     local playerName[128]:WORD
     
     .IF uMsg == WM_DESTROY
+        ; Clean up UI fonts
+        .IF g_hFontLabel
+            invoke DeleteObject, g_hFontLabel
+            mov g_hFontLabel, 0
+        .ENDIF
+        .IF g_hFontEdit
+            invoke DeleteObject, g_hFontEdit
+            mov g_hFontEdit, 0
+        .ENDIF
+        .IF g_hFontButtons
+            invoke DeleteObject, g_hFontButtons
+            mov g_hFontButtons, 0
+        .ENDIF
+
         ; User closed window - exit application
         invoke PostQuitMessage, 0
         xor eax, eax

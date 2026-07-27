@@ -131,6 +131,8 @@ LPN_FRAME  EQU 0x180
 LPN_FP     EQU 0x170
 LPN_SAVE   EQU 0x160
 LPN_BUF    EQU 0x40
+; Buffer spans LPN_BUF..LPN_HKEY, i.e. 256 bytes / 128 wide chars.
+LPN_BUFLEN EQU 0x100
 LPN_HKEY   EQU 0x140
 LPN_SIZE   EQU 0x148
 LPN_TYPE   EQU 0x14C
@@ -156,8 +158,17 @@ LoadPlayerName PROC
     BL RegOpenKeyExW
     CBNZ W0, lpn_not_found
 
+    ; Zero the buffer: a registry value stored without a terminator must not
+    ; leave the copy loop below reading stale stack bytes.
+    ADD X8, SP, #LPN_BUF
+    MOV W9, #(LPN_BUFLEN / 8)
+lpn_zero_loop
+    STR XZR, [X8], #8
+    SUBS W9, W9, #1
+    B.NE lpn_zero_loop
+
     ; RegQueryValueExW(hKey, "PlayerName", NULL, &type, buffer, &size)
-    MOV W8, #512
+    MOV W8, #LPN_BUFLEN
     STR W8, [SP, #LPN_SIZE]
 
     LDR X0, [SP, #LPN_HKEY]      ; arg 1: hKey
@@ -364,6 +375,8 @@ LHS_FRAME EQU 0x180
 LHS_FP    EQU 0x170
 LHS_SAVE  EQU 0x160
 LHS_BUF   EQU 0x40
+; Buffer spans LHS_BUF..LHS_HKEY, i.e. 256 bytes / 128 wide chars.
+LHS_BUFLEN EQU 0x100
 LHS_HKEY  EQU 0x140
 LHS_SIZE  EQU 0x148
 LHS_TYPE  EQU 0x14C
@@ -411,8 +424,17 @@ LoadHighScore PROC
     STR W8, [X19, #GAME_STATE_highScore]
 
 lhs_read_name
+    ; Zero the buffer: a registry value stored without a terminator must not
+    ; leave the copy loop below reading stale stack bytes.
+    ADD X8, SP, #LHS_BUF
+    MOV W9, #(LHS_BUFLEN / 8)
+lhs_zero_loop
+    STR XZR, [X8], #8
+    SUBS W9, W9, #1
+    B.NE lhs_zero_loop
+
     ; Read high score name
-    MOV W8, #512
+    MOV W8, #LHS_BUFLEN
     STR W8, [SP, #LHS_SIZE]
 
     LDR X0, [SP, #LHS_HKEY]

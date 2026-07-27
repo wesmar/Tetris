@@ -97,6 +97,7 @@ g_hButtonClear  DQ 0                ; Clear Record button handle
 g_hButtonGhost  DQ 0                ; Ghost toggle button handle
 g_hEditName     DQ 0                ; Player name edit control handle
 g_hBrushGreen   DQ 0                ; Light green brush for edit control
+g_hFontButtons  DQ 0                ; Custom font for buttons
 
 .DATA?
 ; Uninitialized data - must be 16-byte aligned for SIMD operations
@@ -300,24 +301,24 @@ HandleCreate:
     mov DWORD PTR [rsp+60h], 0
     lea rax, szSegoeUI
     mov QWORD PTR [rsp+68h], rax
-    call CreateFontA
-    mov rbx, rax
+	call CreateFontA
+    mov g_hFontButtons, rax
     
     mov rcx, g_hButtonStart
     mov edx, 30h
-    mov r8, rbx
+    mov r8, g_hFontButtons
     mov r9d, 1
     call SendMessageA
     
     mov rcx, g_hButtonClear
     mov edx, 30h
-    mov r8, rbx
+    mov r8, g_hFontButtons
     mov r9d, 1
     call SendMessageA
     
     mov rcx, g_hButtonGhost
     mov edx, 30h
-    mov r8, rbx
+    mov r8, g_hFontButtons
     mov r9d, 1
     call SendMessageA
 
@@ -638,12 +639,22 @@ HandleCtlColorEdit:
     jmp ExitProc
 
 HandleDestroy:
+    ; Clean up renderer resources
+    lea rcx, g_renderer
+    call CleanupRenderer
+
     ; Clean up brush resource
     mov rcx, g_hBrushGreen
     test rcx, rcx
     jz @@skip_brush
     call DeleteObject
 @@skip_brush:
+    ; Clean up custom button font
+    mov rcx, g_hFontButtons
+    test rcx, rcx
+    jz @@skip_font
+    call DeleteObject
+@@skip_font:
     xor ecx, ecx
     call PostQuitMessage
     xor eax, eax

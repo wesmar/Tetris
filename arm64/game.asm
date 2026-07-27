@@ -361,9 +361,9 @@ CheckCollision PROC
     MOV W21, #0
 
 cc_block_loop
-    LSL W8, W21, #3
     ADD X8, X20, #PIECE_blocks
-    ADD X8, X8, W8, UXTW
+    LSL W9, W21, #3              ; index must not use X8 - it holds the base
+    ADD X8, X8, W9, UXTW
 
     LDRSW X9, [X8, #POINT_STRUCT_x]
     LDR W10, [X20, #PIECE_x]
@@ -509,10 +509,10 @@ cfl_scan_loop
     CMP W20, #0
     B.LT cfl_scan_done
 
-    LDR W8, [X19, #GAME_STATE_boardWidth]
-    MUL W8, W20, W8
+    LDR W9, [X19, #GAME_STATE_boardWidth]
+    MUL W9, W20, W9              ; index must not use X8 - it holds the base
     ADD X8, X19, #GAME_STATE_board
-    ADD X8, X8, W8, UXTW
+    ADD X8, X8, W9, UXTW
 
     MOV W9, #0                   ; column
 
